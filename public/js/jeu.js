@@ -8,7 +8,7 @@ let obstacles = [];
 // for time based animation
 // for time based animation
 let delta, oldTime;
-let playerSpeed = 100; // 100 pixels/s
+let playerSpeed = 50; // 100 pixels/s
 
 function startGame() {
   console.log("init");
@@ -216,10 +216,9 @@ function animationLoop(time) {
     requestAnimationFrame(animationLoop);
   }
 
-  delta = (time - oldTime) / 1000 // delta is in seconds
+  delta = timer(time) // delta is in seconds
 
-  if (delta * 1000 > 1000/fps) {
-    oldTime = time;
+
     if (username != undefined) {
       // 1 On efface l'écran
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -237,7 +236,6 @@ function animationLoop(time) {
     }
   
     //console.log("111")
-  }
 
   // 3 On rappelle la fonction d'animation à 60 im/s
   requestAnimationFrame(animationLoop);

@@ -31,27 +31,35 @@ io.on('connection', (socket) => {
 	// read updateClient message 
 	socket.on("updateClient",(data) => {
 		listOfPlayers[data.user] = data.status
+		//let elapsed = (Date.now() - data.clientTime)/1000
+		//console.log(data.user)
+		//console.log(elapsed)
+		//listOfPlayers[data.user].x += elapsed * listOfPlayers[data.user].vx
+		//listOfPlayers[data.user].y += elapsed * listOfPlayers[data.user].vy
 		listOfClientTime[data.user] = data.clientTime
 		//console.log(Date.now()-data.clientTime);
 	});
 
 	// send heartbeat message
 	setInterval(() => {
-		for (username in listOfPlayers.username) {
-			let elapsed = (Date.now() - listOfClientTime[username])/1000
-			//console.log(elapsed)
-			listOfPlayers[username].x += elapsed * listOfPlayers[username].vx
-			listOfPlayers[username].y += elapsed * listOfPlayers[username].vy
-			listOfPlayers[username].vx = 0
-			listOfPlayers[username].vy = 0
+		let timeNow = Date.now();
+		for (var u in listOfPlayers) {
+			if (listOfClientTime[u] !== undefined) {
+				let elapsed = (timeNow - listOfClientTime[u])/1000
+				listOfPlayers[u].x += elapsed * listOfPlayers[u].vx
+				listOfPlayers[u].y += elapsed * listOfPlayers[u].vy
+				listOfPlayers[u].vx = 0
+				listOfPlayers[u].vy = 0
+			}
+
 		}
-		console.log(listOfPlayers);
-		io.sockets.emit("heartbeat", listOfPlayers);
+		//console.log(1000/nbUpdatesPerSeconds);
+		io.emit("heartbeat", listOfPlayers);
 	},1000/nbUpdatesPerSeconds);
 
 	socket.on("changeNbUpdates",(newNbUpdatesPerSeconds) => {
 		nbUpdatesPerSeconds = newNbUpdatesPerSeconds
-		io.sockets.emit('syncHeartbeat', nbUpdatesPerSeconds);
+		io.emit('syncHeartbeat', nbUpdatesPerSeconds);
 	}
 	);
 	socket.emit("syncHeartbeat", nbUpdatesPerSeconds);
@@ -108,7 +116,7 @@ io.on('connection', (socket) => {
 		// for this example we have x, y and v for speed... ?
 		var player = {x:50, y:50, vx:0, vy:0};
 		listOfPlayers[username] = player;
-		listOfClientTime[username] = 0;
+		listOfClientTime[username] = undefined;
 		io.emit('updatePlayers',listOfPlayers);
 	});
 

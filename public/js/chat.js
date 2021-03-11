@@ -6,7 +6,7 @@ let artificialLatencyDelay=0;
 let socket;
 
 let nbUpdatesPerSeconds=2;
-let fps = 60;
+
 // on load of page
 window.onload = init;
 
@@ -63,7 +63,7 @@ function init() {
 
   });
 	setInterval(() => {
-		socket.emit("updateClient", 
+		send("updateClient", 
     { 
       user: username, 
       status: allPlayers[username], 
@@ -151,9 +151,3 @@ function changeNbUpdatesPerSeconds(value) {
   send("changeNbUpdates", nbUpdatesPerSeconds);
 }
 
-function changeFps(value) {
-  fps = parseInt(value);
-
-  let spanFpsValue = document.querySelector("#fps");
-  spanFpsValue.innerHTML = fps;
-}
