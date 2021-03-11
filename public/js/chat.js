@@ -6,6 +6,7 @@ let artificialLatencyDelay=0;
 let socket;
 
 let nbUpdatesPerSeconds=2;
+let requestList = [];
 
 // on load of page
 window.onload = init;
@@ -63,12 +64,13 @@ function init() {
 
   });
 	setInterval(() => {
-		send("updateClient", 
-    { 
+    let req = { 
       user: username, 
       status: allPlayers[username], 
       clientTime: Date.now()
-    } );
+    };
+    requestList.push(req);
+		send("updateClient", req);
 	},1000/nbUpdatesPerSeconds);
 
   // listener, whenever the server emits 'updatechat', this updates the chat body
@@ -81,9 +83,45 @@ function init() {
   socket.on("updatepos", (username, newPos) => {
     updatePlayerNewPos(newPos);
   });
-
-  socket.on("heartbeat", (listOfplayers) => {
+  function searchIndex(requestList, clientTime) {
+    for (var i = 0; i < requestList.length; i++) {
+      if (requestList[i].clientTime == clientTime) {
+        return i; 
+      }
+    }
+    return -1;
+  }
+  socket.on("heartbeat", (listOfplayers, listOfClientTime) => {
     updatePlayers(listOfplayers);
+    //console.log(listOfClientTime);
+    if (requestList.length > 0) {
+      let idx = searchIndex(requestList, listOfClientTime[username]);
+    
+      if (idx == -1) {
+        console.log("Sever replied a request not sent by this client");
+      } else {
+        if (idx !== 0) {
+          console.log("Requests sent to server between timestamp ",  requestList[0].clientTime, " and timestamp ", requestList[idx].clientTime, " were lost. please have a check");
+        }
+        var currentX = listOfplayers[username].x;
+        var currentY = listOfplayers[username].y;
+        var prevTime = requestList[idx].clientTime;
+        for (var i = idx + 1; i < requestList.length; i ++) {
+          let tmp = requestList[i].clientTime - prevTime;
+          prevTime = requestList[i];
+          currentX += tmp/1000 * requestList[i].vx;
+          currentY += tmp/1000 * requestList[i].vy;
+        }
+        listOfplayers[username].x = currentX;
+        listOfplayers[username].y = currentY;
+        requestList.splice(0, idx+1);
+      }
+    }
+
+
+      
+  
+
   });
   // listener, whenever the server emits 'updateusers', this updates the username list
   socket.on("updateusers", (listOfUsers) => {

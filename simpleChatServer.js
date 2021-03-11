@@ -23,6 +23,7 @@ app.get('/', (req, res) => {
 var playerNames = {};
 var listOfPlayers = {};
 var listOfClientTime = {};
+var listOfReqId = {};
 
 io.on('connection', (socket) => {
 	let emitStamp;
@@ -36,8 +37,8 @@ io.on('connection', (socket) => {
 		//console.log(elapsed)
 		//listOfPlayers[data.user].x += elapsed * listOfPlayers[data.user].vx
 		//listOfPlayers[data.user].y += elapsed * listOfPlayers[data.user].vy
-		listOfClientTime[data.user] = data.clientTime
-		//console.log(Date.now()-data.clientTime);
+		listOfClientTime[data.user] = data.clientTime;
+		//console.log(data.requestId);
 	});
 
 	// send heartbeat message
@@ -53,8 +54,8 @@ io.on('connection', (socket) => {
 			}
 
 		}
-		//console.log(1000/nbUpdatesPerSeconds);
-		io.emit("heartbeat", listOfPlayers);
+		//console.log(listOfReqId);
+		io.emit("heartbeat", listOfPlayers, listOfClientTime);
 	},1000/nbUpdatesPerSeconds);
 
 	socket.on("changeNbUpdates",(newNbUpdatesPerSeconds) => {
@@ -117,6 +118,7 @@ io.on('connection', (socket) => {
 		var player = {x:50, y:50, vx:0, vy:0};
 		listOfPlayers[username] = player;
 		listOfClientTime[username] = undefined;
+		listOfReqId[username] = 0;
 		io.emit('updatePlayers',listOfPlayers);
 	});
 
