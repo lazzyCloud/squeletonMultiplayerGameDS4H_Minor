@@ -1,6 +1,8 @@
 let username;
 let conversation, data, datasend, users;
 
+let artificialLatencyDelay=0;
+
 let socket;
 
 // on load of page
@@ -46,6 +48,8 @@ function init() {
   }
   // on connection to server, ask for user's name with an anonymous callback
   socket.on("connect", () => {
+    clientStartTimeAtConnection = Date.now();
+
     // call the server-side function 'adduser' and send one parameter (value of prompt)
     socket.emit("adduser", username);
   });
@@ -76,6 +80,44 @@ function init() {
     updatePlayers(listOfplayers);
   });
 
+  // Latency, ping etc.
+  socket.on("ping", () => {
+    send("pongo");
+  });
+
+  socket.on("data", (timestamp, rtt, serverTime) => {
+    //console.log("rtt time received from server " + rtt);
+
+    let spanRtt = document.querySelector("#rtt");
+    spanRtt.innerHTML = rtt;
+
+    let spanPing = document.querySelector("#ping");
+    spanPing.innerHTML = (rtt/2).toFixed(1);
+
+    let spanServerTime = document.querySelector("#serverTime");
+    spanServerTime.innerHTML = (serverTime/1000).toFixed(2);
+
+    let clientTime = Date.now() - clientStartTimeAtConnection;
+
+    let spanClientTime = document.querySelector("#clientTime");
+    spanClientTime.innerHTML = (serverTime/1000).toFixed(2);
+  
+  });
+
   // we start the Game
   startGame();
+}
+
+// PERMET D'ENVOYER SUR WEBSOCKET en simulant une latence (donnée par la valeur de delay)
+function send(typeOfMessage, data) {
+  setTimeout(() => {
+      socket.emit(typeOfMessage, data)
+  }, artificialLatencyDelay);
+}
+
+function changeArtificialLatency(value) {
+  artificialLatencyDelay = parseInt(value);
+
+  let spanDelayValue = document.querySelector("#delay");
+  spanDelayValue.innerHTML = artificialLatencyDelay;
 }

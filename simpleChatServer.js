@@ -22,6 +22,24 @@ var playerNames = {};
 var listOfPlayers = {};
 
 io.on('connection', (socket) => {
+	let emitStamp;
+	let connectionStamp = Date.now();
+
+	// Pour le ping/pong mesure de latence
+	setInterval(() => {
+        emitStamp = Date.now();
+        socket.emit("ping");
+    },500);
+
+	socket.on("pongo", () => { // "pong" is a reserved event name
+		let currentTime = Date.now();
+		let timeElapsedSincePing = currentTime - emitStamp;
+		let serverTimeElapsedSinceClientConnected = currentTime - connectionStamp;
+
+		//console.log("pongo received, rtt time = " + timeElapsedSincePing);
+
+		socket.emit("data", currentTime, timeElapsedSincePing, serverTimeElapsedSinceClientConnected);
+	});
 
 	// when the client emits 'sendchat', this listens and executes
 	socket.on('sendchat', (data) => {
