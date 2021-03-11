@@ -8,7 +8,7 @@ let obstacles = [];
 
 // for time based animation
 // for time based animation
-let delta, oldTime = 0;
+let delta, oldTime;
 let playerSpeed = 100; // 100 pixels/s
 
 function startGame() {
@@ -29,7 +29,7 @@ function startGame() {
 }
 
 function createObstacles() {
-  let o1 = {x:50, y:50, width:20, height:100, color:"black", vy:100, range:100}
+  let o1 = {x:50, y:50, width:20, height:100, color:"black", vy:50, range:110}
   let o2 = {x:150, y:50, width:20, height:50, color:"orange", vy:30, range:100}
   obstacles.push(o1);
   obstacles.push(o2);
@@ -187,10 +187,17 @@ function drawObstacles() {
 
     o.y += calcDistanceToMove(delta,o.vy);
 
-    if(o.y > 250) o.vy = -o.vy;
+    if(o.y > 250) {
+      console.log("y > 250 we reverse the speed");
+      // we must put the obstacle back at contact point
+      o.y = 249;
+      o.vy = -o.vy;
+    } 
 
-    if(o.y <40) o.vy = -o.vy;
-
+    if(o.y <40) {
+      o.y = 41;
+      o.vy = -o.vy;
+    }
   });
 
   ctx.restore();
@@ -205,6 +212,11 @@ function timer(currentTime) {
 }
 
 function animationLoop(time) {
+  if(!oldTime) {
+    oldTime = time;
+    requestAnimationFrame(animationLoop);
+  }
+
   delta = timer(time); // delta is in seconds
   
 
