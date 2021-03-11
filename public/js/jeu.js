@@ -123,6 +123,9 @@ function moveCurrentPlayer() {
   if (allPlayers[username] !== undefined) {
     allPlayers[username].x += allPlayers[username].vx;
     allPlayers[username].y += allPlayers[username].vy;
+
+    socket.emit("sendpos", { user: username, pos: allPlayers[username]});
+
   }
 }
 
