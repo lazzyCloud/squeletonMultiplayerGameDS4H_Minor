@@ -5,6 +5,8 @@ let artificialLatencyDelay=0;
 
 let socket;
 
+let nbUpdatesPerSeconds=2;
+let fps = 60;
 // on load of page
 window.onload = init;
 
@@ -53,6 +55,21 @@ function init() {
     // call the server-side function 'adduser' and send one parameter (value of prompt)
     socket.emit("adduser", username);
   });
+  // update nbUpdatesPerSeconds
+  socket.on("syncHeartbeat", (nbUpdatesPerSeconds) => {
+    let spanNbUpdatesPerSecondsValue = document.querySelector("#nbUpdatesPerSeconds");
+    spanNbUpdatesPerSecondsValue.innerHTML = nbUpdatesPerSeconds;
+    document.getElementById("heartbeatRange").value = nbUpdatesPerSeconds;
+
+  });
+	setInterval(() => {
+		socket.emit("updateClient", 
+    { 
+      user: username, 
+      status: allPlayers[username], 
+      clientTime: Date.now()
+    } );
+	},1000/nbUpdatesPerSeconds);
 
   // listener, whenever the server emits 'updatechat', this updates the chat body
   socket.on("updatechat", (username, data) => {
@@ -65,6 +82,9 @@ function init() {
     updatePlayerNewPos(newPos);
   });
 
+  socket.on("heartbeat", (listOfplayers) => {
+    updatePlayers(listOfplayers);
+  });
   // listener, whenever the server emits 'updateusers', this updates the username list
   socket.on("updateusers", (listOfUsers) => {
     users.innerHTML = "";
@@ -120,4 +140,20 @@ function changeArtificialLatency(value) {
 
   let spanDelayValue = document.querySelector("#delay");
   spanDelayValue.innerHTML = artificialLatencyDelay;
+}
+
+function changeNbUpdatesPerSeconds(value) {
+  nbUpdatesPerSeconds = parseInt(value);
+
+  let spanNbUpdatesPerSecondsValue = document.querySelector("#nbUpdatesPerSeconds");
+  spanNbUpdatesPerSecondsValue.innerHTML = nbUpdatesPerSeconds;
+
+  send("changeNbUpdates", nbUpdatesPerSeconds);
+}
+
+function changeFps(value) {
+  fps = parseInt(value);
+
+  let spanFpsValue = document.querySelector("#fps");
+  spanFpsValue.innerHTML = fps;
 }

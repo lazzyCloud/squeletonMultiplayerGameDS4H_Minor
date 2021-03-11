@@ -3,7 +3,6 @@ let canvas, ctx, mousePos;
 // Autres joueurs
 let allPlayers = {};
 let target = {x:150, y:200, radius:50, color:'yellow'};
-
 let obstacles = [];
 
 // for time based animation
@@ -85,7 +84,7 @@ function traiteMouseMove(evt) {
 
   console.log("On envoie sendPos");
   let pos = { user: username, pos: mousePos };
-  socket.emit("sendpos", pos);
+  //socket.emit("sendpos", pos);
 }
 
 function updatePlayerNewPos(newPos) {
@@ -129,7 +128,7 @@ function moveCurrentPlayer() {
     allPlayers[username].x += calcDistanceToMove(delta, allPlayers[username].vx);
     allPlayers[username].y += calcDistanceToMove(delta, allPlayers[username].vy);
 
-    socket.emit("sendpos", { user: username, pos: allPlayers[username]});
+    //socket.emit("sendpos", { user: username, pos: allPlayers[username]});
 
   }
 }
@@ -217,23 +216,27 @@ function animationLoop(time) {
     requestAnimationFrame(animationLoop);
   }
 
-  delta = timer(time); // delta is in seconds
+  delta = (time - oldTime) / 1000 // delta is in seconds
+
+  if (delta * 1000 > 1000/fps) {
+    oldTime = time;
+    if (username != undefined) {
+      // 1 On efface l'écran
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
   
-
-  if (username != undefined) {
-    // 1 On efface l'écran
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // 2 On dessine des objets
-    drawAllPlayers();
-
-    drawTarget();
-    drawObstacles();
-
-    moveCurrentPlayer();
-    checkIfPlayerHitTarget(allPlayers[username]);
-
-    //checkCollisionsPlayerWithObstacles()
+      // 2 On dessine des objets
+      drawAllPlayers();
+  
+      drawTarget();
+      drawObstacles();
+  
+      moveCurrentPlayer();
+      checkIfPlayerHitTarget(allPlayers[username]);
+  
+      //checkCollisionsPlayerWithObstacles()
+    }
+  
+    //console.log("111")
   }
 
   // 3 On rappelle la fonction d'animation à 60 im/s

@@ -4,6 +4,8 @@ const http = require('http').Server(app);
 
 const io = require('socket.io')(http);
 
+let nbUpdatesPerSeconds = 2;
+
 http.listen(8082, () => {
 	console.log("Web server écoute sur http://localhost:8082");
 })
@@ -20,11 +22,40 @@ app.get('/', (req, res) => {
 // nom des joueurs connectés sur le chat
 var playerNames = {};
 var listOfPlayers = {};
+var listOfClientTime = {};
 
 io.on('connection', (socket) => {
 	let emitStamp;
 	let connectionStamp = Date.now();
 
+	// read updateClient message 
+	socket.on("updateClient",(data) => {
+		listOfPlayers[data.user] = data.status
+		listOfClientTime[data.user] = data.clientTime
+		//console.log(Date.now()-data.clientTime);
+	});
+
+	// send heartbeat message
+	setInterval(() => {
+		for (username in listOfPlayers.username) {
+			let elapsed = (Date.now() - listOfClientTime[username])/1000
+			//console.log(elapsed)
+			listOfPlayers[username].x += elapsed * listOfPlayers[username].vx
+			listOfPlayers[username].y += elapsed * listOfPlayers[username].vy
+			listOfPlayers[username].vx = 0
+			listOfPlayers[username].vy = 0
+		}
+		console.log(listOfPlayers);
+		io.sockets.emit("heartbeat", listOfPlayers);
+	},1000/nbUpdatesPerSeconds);
+
+	socket.on("changeNbUpdates",(newNbUpdatesPerSeconds) => {
+		nbUpdatesPerSeconds = newNbUpdatesPerSeconds
+		io.sockets.emit('syncHeartbeat', nbUpdatesPerSeconds);
+	}
+	);
+	socket.emit("syncHeartbeat", nbUpdatesPerSeconds);
+	
 	// Pour le ping/pong mesure de latence
 	setInterval(() => {
         emitStamp = Date.now();
@@ -48,11 +79,11 @@ io.on('connection', (socket) => {
 	});
 
 	// when the client emits 'sendchat', this listens and executes
-	socket.on('sendpos', (newPos) => {
+	//socket.on('sendpos', (newPos) => {
 		// we tell the client to execute 'updatepos' with 2 parameters
 		//console.log("recu sendPos");
-		socket.broadcast.emit('updatepos', socket.username, newPos);
-	});
+	//	socket.broadcast.emit('updatepos', socket.username, newPos);
+	//});
 
 	// when the client emits 'adduser', this listens and executes
 	socket.on('adduser', (username) => {
@@ -77,6 +108,7 @@ io.on('connection', (socket) => {
 		// for this example we have x, y and v for speed... ?
 		var player = {x:50, y:50, vx:0, vy:0};
 		listOfPlayers[username] = player;
+		listOfClientTime[username] = 0;
 		io.emit('updatePlayers',listOfPlayers);
 	});
 
@@ -88,7 +120,8 @@ io.on('connection', (socket) => {
 		io.emit('updateusers', playerNames);
 
 		// Remove the player too
-		delete listOfPlayers[socket.username];		
+		delete listOfPlayers[socket.username];
+		delete listOfClientTime[socket.username];		
 		io.emit('updatePlayers',listOfPlayers);
 		
 		// echo globally that this client has left
