@@ -6,6 +6,11 @@ let target = {x:150, y:200, radius:50, color:'yellow'};
 
 let obstacles = [];
 
+// for time based animation
+// for time based animation
+let delta, oldTime = 0;
+let playerSpeed = 100; // 100 pixels/s
+
 function startGame() {
   console.log("init");
   canvas = document.querySelector("#myCanvas");
@@ -24,8 +29,8 @@ function startGame() {
 }
 
 function createObstacles() {
-  let o1 = {x:50, y:50, width:20, height:100, color:"black", vy:3, range:100}
-  let o2 = {x:150, y:50, width:20, height:50, color:"orange", vy:3, range:100}
+  let o1 = {x:50, y:50, width:20, height:100, color:"black", vy:100, range:100}
+  let o2 = {x:150, y:50, width:20, height:50, color:"orange", vy:30, range:100}
   obstacles.push(o1);
   obstacles.push(o2);
 }
@@ -36,16 +41,16 @@ function processKeydown(event) {
 
   switch (event.key) {
     case "ArrowRight":
-      allPlayers[username].vx = 3;
+      allPlayers[username].vx = playerSpeed;
       break;
     case "ArrowLeft":
-      allPlayers[username].vx = -3;
+      allPlayers[username].vx = -playerSpeed;
       break;
     case "ArrowUp":
-      allPlayers[username].vy = -3;
+      allPlayers[username].vy = -playerSpeed;
       break;
     case "ArrowDown":
-      allPlayers[username].vy = 3;
+      allPlayers[username].vy = playerSpeed;
       break;
   }
 
@@ -121,8 +126,8 @@ function getMousePos(canvas, evt) {
 
 function moveCurrentPlayer() {
   if (allPlayers[username] !== undefined) {
-    allPlayers[username].x += allPlayers[username].vx;
-    allPlayers[username].y += allPlayers[username].vy;
+    allPlayers[username].x += calcDistanceToMove(delta, allPlayers[username].vx);
+    allPlayers[username].y += calcDistanceToMove(delta, allPlayers[username].vy);
 
     socket.emit("sendpos", { user: username, pos: allPlayers[username]});
 
@@ -180,7 +185,8 @@ function drawObstacles() {
     ctx.fillStyle = o.color;
     ctx.fillRect(o.x, o.y, o.width, o.height);
 
-    o.y += o.vy;
+    o.y += calcDistanceToMove(delta,o.vy);
+
     if(o.y > 250) o.vy = -o.vy;
 
     if(o.y <40) o.vy = -o.vy;
@@ -189,7 +195,19 @@ function drawObstacles() {
 
   ctx.restore();
 }
-function animationLoop() {
+
+
+// returns the time elapsed since last frame has been drawn, in seconds
+function timer(currentTime) {
+  var delta = currentTime - oldTime;
+  oldTime = currentTime;
+  return delta/1000;
+}
+
+function animationLoop(time) {
+  delta = timer(time); // delta is in seconds
+  
+
   if (username != undefined) {
     // 1 On efface l'écran
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -209,3 +227,9 @@ function animationLoop() {
   // 3 On rappelle la fonction d'animation à 60 im/s
   requestAnimationFrame(animationLoop);
 }
+
+// Delta in seconds, speed in pixels/s
+var calcDistanceToMove = function(delta, speed) {
+  //console.log("#delta = " + delta + " speed = " + speed);
+  return (speed * delta); 
+};
