@@ -4,7 +4,8 @@ const http = require('http').Server(app);
 
 const io = require('socket.io')(http);
 
-let nbUpdatesPerSeconds = 2;
+// initialize number of updates per seconds to 10 (100 ms per heartbeat)
+let nbUpdatesPerSeconds = 10;
 
 http.listen(8082, () => {
 	console.log("Web server écoute sur http://localhost:8082");
@@ -22,8 +23,8 @@ app.get('/', (req, res) => {
 // nom des joueurs connectés sur le chat
 var playerNames = {};
 var listOfPlayers = {};
+// dict to store latest request id, I use request timestamp as id
 var listOfClientTime = {};
-var listOfReqId = {};
 
 io.on('connection', (socket) => {
 	let emitStamp;
@@ -31,38 +32,40 @@ io.on('connection', (socket) => {
 
 	// read updateClient message 
 	socket.on("updateClient",(data) => {
+		// record message timestamp (id) as well as client status (x, y, speed)
 		listOfPlayers[data.user] = data.status
-		//let elapsed = (Date.now() - data.clientTime)/1000
-		//console.log(data.user)
-		//console.log(elapsed)
-		//listOfPlayers[data.user].x += elapsed * listOfPlayers[data.user].vx
-		//listOfPlayers[data.user].y += elapsed * listOfPlayers[data.user].vy
 		listOfClientTime[data.user] = data.clientTime;
-		//console.log(data.requestId);
+
 	});
 
 	// send heartbeat message
 	setInterval(() => {
 		let timeNow = Date.now();
 		for (var u in listOfPlayers) {
-			if (listOfClientTime[u] !== undefined) {
+			if (listOfClientTime[u] !== undefined && listOfPlayers[u] !== undefined ) {
+				// calculate elapsed time since message is sent
 				let elapsed = (timeNow - listOfClientTime[u])/1000
+				// calculate current client position
 				listOfPlayers[u].x += elapsed * listOfPlayers[u].vx
 				listOfPlayers[u].y += elapsed * listOfPlayers[u].vy
+				// reset speed to 0
 				listOfPlayers[u].vx = 0
 				listOfPlayers[u].vy = 0
 			}
 
 		}
-		//console.log(listOfReqId);
 		io.emit("heartbeat", listOfPlayers, listOfClientTime);
 	},1000/nbUpdatesPerSeconds);
 
+	// read client changes number of updates message
 	socket.on("changeNbUpdates",(newNbUpdatesPerSeconds) => {
+		// change number of updates on server
 		nbUpdatesPerSeconds = newNbUpdatesPerSeconds
+		// broadcast this change
 		io.emit('syncHeartbeat', nbUpdatesPerSeconds);
 	}
 	);
+	// sync hearbeat when client first connect to server
 	socket.emit("syncHeartbeat", nbUpdatesPerSeconds);
 	
 	// Pour le ping/pong mesure de latence
@@ -118,7 +121,6 @@ io.on('connection', (socket) => {
 		var player = {x:50, y:50, vx:0, vy:0};
 		listOfPlayers[username] = player;
 		listOfClientTime[username] = undefined;
-		listOfReqId[username] = 0;
 		io.emit('updatePlayers',listOfPlayers);
 	});
 

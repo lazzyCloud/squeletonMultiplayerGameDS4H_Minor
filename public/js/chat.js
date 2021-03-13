@@ -5,7 +5,9 @@ let artificialLatencyDelay=0;
 
 let socket;
 
-let nbUpdatesPerSeconds=2;
+// initialize number of updates per seconds to 10 (100 ms per heartbeat)
+let nbUpdatesPerSeconds=10;
+// initialize request list
 let requestList = [];
 
 // on load of page
@@ -56,19 +58,25 @@ function init() {
     // call the server-side function 'adduser' and send one parameter (value of prompt)
     socket.emit("adduser", username);
   });
-  // update nbUpdatesPerSeconds
+
+  // if receive new nbUpdatesPerSeconds from serve, update local value
   socket.on("syncHeartbeat", (nbUpdatesPerSeconds) => {
+    // update GUI value
     let spanNbUpdatesPerSecondsValue = document.querySelector("#nbUpdatesPerSeconds");
     spanNbUpdatesPerSecondsValue.innerHTML = nbUpdatesPerSeconds;
     document.getElementById("heartbeatRange").value = nbUpdatesPerSeconds;
 
   });
+  // send updateClient message every 1000/nbUpdatesPerSeconds ms
 	setInterval(() => {
+    let t = Date.now()
+    // send username, status (x, y, speed) and timestamp (also used as request id)
     let req = { 
       user: username, 
       status: allPlayers[username], 
-      clientTime: Date.now()
+      clientTime: t
     };
+    // record this request in local list
     requestList.push(req);
 		send("updateClient", req);
 	},1000/nbUpdatesPerSeconds);
@@ -85,43 +93,58 @@ function init() {
   });
   function searchIndex(requestList, clientTime) {
     for (var i = 0; i < requestList.length; i++) {
+      // if current timestamp greater than the one we want to search, directly break
+      if (requestList[i].clientTime > clientTime) {
+        break; 
+      }
       if (requestList[i].clientTime == clientTime) {
         return i; 
       }
     }
     return -1;
   }
+
+  // when client receive heartbeat message, reconciliate its position with the one calculated by server
   socket.on("heartbeat", (listOfplayers, listOfClientTime) => {
-    updatePlayers(listOfplayers);
-    //console.log(listOfClientTime);
+    // update other players position as received from server
+    let tmpUser = allPlayers[username];
+    allPlayers = listOfplayers;
+    allPlayers[username] = tmpUser;
+
+    // check if request list is empty, if its empty, means we receive unknown heartbeat, should throw error
     if (requestList.length > 0) {
+      // check the index of this request in request list
       let idx = searchIndex(requestList, listOfClientTime[username]);
-    
+      
       if (idx == -1) {
-        console.log("Sever replied a request not sent by this client");
+        // if not find the request id (timestamp) in list, ignore message
       } else {
         if (idx !== 0) {
+          // if the request is not the head of queue, means some replies from server were lost
           console.log("Requests sent to server between timestamp ",  requestList[0].clientTime, " and timestamp ", requestList[idx].clientTime, " were lost. please have a check");
         }
+        // reconciliate client side position with server side position
         var currentX = listOfplayers[username].x;
         var currentY = listOfplayers[username].y;
-        var prevTime = requestList[idx].clientTime;
-        for (var i = idx + 1; i < requestList.length; i ++) {
+        var prevTime = listOfClientTime[username];
+        // calculate new positon by using request sent after this id
+        for (var i = idx+1 ; i < requestList.length; i ++) {
           let tmp = requestList[i].clientTime - prevTime;
           prevTime = requestList[i];
-          currentX += tmp/1000 * requestList[i].vx;
-          currentY += tmp/1000 * requestList[i].vy;
+          currentX += tmp/1000 * requestList[i-1].vx;
+          currentY += tmp/1000 * requestList[i-1].vy;
         }
-        listOfplayers[username].x = currentX;
-        listOfplayers[username].y = currentY;
-        requestList.splice(0, idx+1);
+        // update client position
+        if (!isNaN(currentX) && !isNaN(currentY)) {
+          allPlayers[username].x = currentX;
+          allPlayers[username].y = currentY;
+        }
+        requestList = requestList.splice(idx+1);
       }
     }
 
 
       
-  
-
   });
   // listener, whenever the server emits 'updateusers', this updates the username list
   socket.on("updateusers", (listOfUsers) => {
@@ -180,6 +203,7 @@ function changeArtificialLatency(value) {
   spanDelayValue.innerHTML = artificialLatencyDelay;
 }
 
+// parse GUI nbUpdatesPerSeconds change to backend, and send message to server to inform this change
 function changeNbUpdatesPerSeconds(value) {
   nbUpdatesPerSeconds = parseInt(value);
 
