@@ -130,14 +130,17 @@ function init() {
         // calculate new positon by using request sent after this id
         for (var i = idx+1 ; i < requestList.length; i ++) {
           let tmp = requestList[i].clientTime - prevTime;
-          prevTime = requestList[i];
-          currentX += tmp/1000 * requestList[i-1].vx;
-          currentY += tmp/1000 * requestList[i-1].vy;
+          prevTime = requestList[i].clientTime;
+          currentX += tmp/1000 * requestList[i-1].status.vx;
+          currentY += tmp/1000 * requestList[i-1].status.vy;
+
         }
         // update client position
         if (!isNaN(currentX) && !isNaN(currentY)) {
           allPlayers[username].x = currentX;
           allPlayers[username].y = currentY;
+          //console.log(requestList[i-1].status.vx);
+          //console.log(requestList[i-1].status.vy);
         }
         requestList = requestList.splice(idx+1);
       }

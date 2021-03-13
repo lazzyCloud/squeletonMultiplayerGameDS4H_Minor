@@ -172,6 +172,7 @@ function checkIfPlayerHitTarget(player) {
     target.color = "red";
     player.x = 10;
     player.y = 10;
+    requestList = [];
   } else {
     target.color = "yellow";
   }
